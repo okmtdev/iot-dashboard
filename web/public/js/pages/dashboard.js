@@ -31,31 +31,54 @@ export function renderDashboardPage(root, routeId) {
   const body = h('div', { class: 'dash-body' })
   root.replaceChildren(toolbar, body)
 
-  // ---- 全画面（キオスク）表示 ----
-  let fullscreen = false
-  const exitBtn = h(
-    'button',
-    { class: 'kiosk-exit', type: 'button', title: '全画面を終了 (Esc)', onClick: () => exitFullscreen() },
-    '✕ 全画面を終了'
+  // ---- 全画面表示 ----
+  // 2段階を用意する:
+  //   1) ページ内全画面（キオスク）: アプリのヘッダー/ツールバーを隠してタブいっぱいに表示
+  //   2) ブラウザ全画面: Fullscreen API でブラウザのバーごと画面いっぱいに（対応環境のみ）
+  let kiosk = false
+  const isBrowserFs = () => !!document.fullscreenElement
+
+  const fsToggleBtn = h('button', {
+    class: 'kiosk-btn',
+    type: 'button',
+    onClick: () => toggleBrowserFs(),
+  })
+  const updateFsToggle = () => {
+    fsToggleBtn.textContent = isBrowserFs() ? '🗕 ブラウザ全画面を解除' : '⛶ ブラウザ全画面'
+    fsToggleBtn.title = isBrowserFs() ? '画面いっぱい表示を解除' : 'ブラウザごと画面いっぱいに表示'
+  }
+  const kioskBar = h(
+    'div',
+    { class: 'kiosk-bar' },
+    fsToggleBtn,
+    h('button', { class: 'kiosk-btn kiosk-exit', type: 'button', title: '全画面表示を終了 (Esc)', onClick: () => exitKiosk() }, '✕ 終了')
   )
-  const enterFullscreen = () => {
-    fullscreen = true
+
+  const enterKiosk = () => {
+    kiosk = true
     document.body.classList.add('kiosk')
-    root.append(exitBtn)
-    // ブラウザのフルスクリーンAPIも併用（未対応環境ではCSSのみで全画面風に）
-    document.documentElement.requestFullscreen?.().catch(() => {})
+    updateFsToggle()
+    root.append(kioskBar)
   }
-  const exitFullscreen = (exitBrowser = true) => {
-    fullscreen = false
+  const exitKiosk = () => {
+    kiosk = false
     document.body.classList.remove('kiosk')
-    exitBtn.remove()
-    if (exitBrowser && document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    kioskBar.remove()
+    if (isBrowserFs()) document.exitFullscreen().catch(() => {})
   }
-  const onFsChange = () => {
-    if (!document.fullscreenElement && fullscreen) exitFullscreen(false)
+  const toggleBrowserFs = async () => {
+    try {
+      if (isBrowserFs()) await document.exitFullscreen()
+      else await document.documentElement.requestFullscreen()
+    } catch {
+      toast('error', 'この環境ではブラウザ全画面を使えませんでした（ページ内全画面はご利用いただけます）')
+    }
+    updateFsToggle()
   }
+  // ブラウザ全画面はESC等で解除されうるが、その場合もページ内全画面は維持しラベルだけ更新する
+  const onFsChange = () => updateFsToggle()
   const onFsKey = (e) => {
-    if (e.key === 'Escape' && fullscreen && !document.fullscreenElement) exitFullscreen()
+    if (e.key === 'Escape' && kiosk && !isBrowserFs()) exitKiosk()
   }
   document.addEventListener('fullscreenchange', onFsChange)
   document.addEventListener('keydown', onFsKey)
@@ -78,7 +101,15 @@ export function renderDashboardPage(root, routeId) {
   // ---- ウィジェットカード ----
   const buildCard = (widget) => {
     const def = widgetDef(widget.type)
-    const inst = def.mount(structuredClone(widget.config || {}))
+    // 対話的なウィジェット（ToDo等）が自身の設定を永続化するためのコールバック。
+    // configJson も同期しておき、次回の再描画で不要な作り直しが起きないようにする。
+    const save = (partial) => {
+      widget.config = { ...(widget.config || {}), ...partial }
+      const entry = cards.get(widget.id)
+      if (entry) entry.configJson = JSON.stringify(widget.config)
+      scheduleSave()
+    }
+    const inst = def.mount(structuredClone(widget.config || {}), { save })
     const head = h(
       'div',
       { class: 'widget-head drag-handle' },
@@ -322,7 +353,7 @@ export function renderDashboardPage(root, routeId) {
             edit ? btn({ label: '＋ ウィジェット', variant: 'soft', onClick: openGallery }) : null,
             edit ? btn({ label: '名前・削除', onClick: openDashSettings }) : null,
             !edit && active.widgets.length > 0
-              ? btn({ label: '⛶ 全画面', title: 'ダッシュボードを全画面表示', onClick: enterFullscreen })
+              ? btn({ label: '⛶ 全画面', title: 'ダッシュボードを全画面表示', onClick: enterKiosk })
               : null,
             btn({
               label: edit ? '✓ 完了' : '✏️ 編集',
@@ -462,7 +493,7 @@ export function renderDashboardPage(root, routeId) {
 
   return () => {
     flushSave()
-    if (fullscreen) exitFullscreen()
+    if (kiosk) exitKiosk()
     document.removeEventListener('fullscreenchange', onFsChange)
     document.removeEventListener('keydown', onFsKey)
     MOBILE.removeEventListener('change', onMedia)
