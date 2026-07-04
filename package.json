@@ -1,0 +1,15 @@
+{
+  "name": "iot-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "おうちのネットワークを見える化する、ローカル運用・依存ゼロのWebダッシュボード",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "demo": "DEMO=1 DATA_DIR=./demo-data node server/index.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

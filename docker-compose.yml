@@ -1,0 +1,15 @@
+services:
+  iot-dashboard:
+    build: .
+    container_name: iot-dashboard
+    # LANのスキャン（ARP参照）とWoLブロードキャストのためホストネットワークが必須
+    network_mode: host
+    cap_add:
+      - NET_RAW # ping (ICMP) 用
+    environment:
+      - PORT=3000
+      # - BASIC_AUTH_USER=admin
+      # - BASIC_AUTH_PASS=強いパスワードに変更
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
