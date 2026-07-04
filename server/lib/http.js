@@ -46,13 +46,13 @@ function compilePattern(pattern) {
   return { regex, keys }
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = MAX_BODY) {
   return new Promise((resolve, reject) => {
     const chunks = []
     let size = 0
     req.on('data', (chunk) => {
       size += chunk.length
-      if (size > MAX_BODY) {
+      if (size > maxBytes) {
         reject(new HttpError(413, 'リクエストが大きすぎます'))
         req.destroy()
         return
@@ -118,6 +118,9 @@ export class Router {
           } catch {
             throw new HttpError(400, 'JSONの形式が不正です')
           }
+        },
+        raw(maxBytes) {
+          return readBody(req, maxBytes)
         },
       }
       try {

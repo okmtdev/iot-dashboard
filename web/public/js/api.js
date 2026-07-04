@@ -34,4 +34,23 @@ export const api = {
   geocode: (q) => request(`/api/geocode?q=${encodeURIComponent(q)}`),
   settings: () => request('/api/settings'),
   saveSettings: (body) => request('/api/settings', { method: 'PUT', body }),
+  uploadImage: async (blob) => {
+    const res = await fetch('/api/uploads', {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type || 'application/octet-stream' },
+      body: blob,
+    })
+    if (!res.ok) {
+      let message = `アップロードに失敗しました (HTTP ${res.status})`
+      try {
+        const j = await res.json()
+        if (j.error) message = j.error
+      } catch {
+        /* JSONでないエラー応答 */
+      }
+      throw new Error(message)
+    }
+    return res.json()
+  },
+  deleteUpload: (name) => request(`/api/uploads/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 }

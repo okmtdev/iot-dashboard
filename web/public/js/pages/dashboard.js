@@ -31,6 +31,35 @@ export function renderDashboardPage(root, routeId) {
   const body = h('div', { class: 'dash-body' })
   root.replaceChildren(toolbar, body)
 
+  // ---- 全画面（キオスク）表示 ----
+  let fullscreen = false
+  const exitBtn = h(
+    'button',
+    { class: 'kiosk-exit', type: 'button', title: '全画面を終了 (Esc)', onClick: () => exitFullscreen() },
+    '✕ 全画面を終了'
+  )
+  const enterFullscreen = () => {
+    fullscreen = true
+    document.body.classList.add('kiosk')
+    root.append(exitBtn)
+    // ブラウザのフルスクリーンAPIも併用（未対応環境ではCSSのみで全画面風に）
+    document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+  const exitFullscreen = (exitBrowser = true) => {
+    fullscreen = false
+    document.body.classList.remove('kiosk')
+    exitBtn.remove()
+    if (exitBrowser && document.fullscreenElement) document.exitFullscreen().catch(() => {})
+  }
+  const onFsChange = () => {
+    if (!document.fullscreenElement && fullscreen) exitFullscreen(false)
+  }
+  const onFsKey = (e) => {
+    if (e.key === 'Escape' && fullscreen && !document.fullscreenElement) exitFullscreen()
+  }
+  document.addEventListener('fullscreenchange', onFsChange)
+  document.addEventListener('keydown', onFsKey)
+
   // ---- 保存（デバウンス + 破棄時フラッシュ） ----
   const scheduleSave = () => {
     if (!active) return
@@ -292,6 +321,9 @@ export function renderDashboardPage(root, routeId) {
             { class: 'dash-actions' },
             edit ? btn({ label: '＋ ウィジェット', variant: 'soft', onClick: openGallery }) : null,
             edit ? btn({ label: '名前・削除', onClick: openDashSettings }) : null,
+            !edit && active.widgets.length > 0
+              ? btn({ label: '⛶ 全画面', title: 'ダッシュボードを全画面表示', onClick: enterFullscreen })
+              : null,
             btn({
               label: edit ? '✓ 完了' : '✏️ 編集',
               variant: edit ? 'primary' : 'ghost',
@@ -430,6 +462,9 @@ export function renderDashboardPage(root, routeId) {
 
   return () => {
     flushSave()
+    if (fullscreen) exitFullscreen()
+    document.removeEventListener('fullscreenchange', onFsChange)
+    document.removeEventListener('keydown', onFsKey)
     MOBILE.removeEventListener('change', onMedia)
     destroyGrid()
     for (const entry of cards.values()) entry.inst.destroy()
