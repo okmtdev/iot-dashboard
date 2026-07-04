@@ -8,15 +8,15 @@ import links from './links.js'
 import notes from './notes.js'
 import wol from './wol.js'
 import pingChart from './ping-chart.js'
+import photo from './photo.js'
 
 import { widgetMessage } from './common.js'
 
 // ダッシュボードに配置できるウィジェット一覧（ギャラリーの表示順）
 export const WIDGETS = Object.fromEntries(
-  [deviceStatus, pingChart, stream, clock, weather, networkSummary, systemMonitor, wol, links, notes].map((w) => [
-    w.type,
-    w,
-  ])
+  [deviceStatus, pingChart, stream, photo, clock, weather, networkSummary, systemMonitor, wol, links, notes].map(
+    (w) => [w.type, w]
+  )
 )
 
 const UNKNOWN = {

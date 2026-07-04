@@ -905,6 +905,116 @@ select.input { appearance: auto; }
 .w-ping-tip-time { color: var(--c-muted); }
 .w-ping-tip-val { font-weight: 700; }
 
+/* フォト */
+.w-photo {
+  position: relative;
+  height: 100%;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+.w-photo-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.w-photo-img.is-active { opacity: 1; }
+.w-photo-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 46px;
+  font-size: 26px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.w-photo:hover .w-photo-nav { opacity: 1; }
+.w-photo-prev { left: 8px; }
+.w-photo-next { right: 8px; }
+.w-photo-counter {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 9px;
+  border-radius: 999px;
+  z-index: 2;
+}
+.w-photo-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.w-photo-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface2);
+}
+.w-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.w-photo-thumb-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+.w-photo-thumb-del:hover { background: var(--c-crit); }
+
+/* 全画面（キオスク）表示 */
+body.kiosk .header,
+body.kiosk .dash-toolbar,
+body.kiosk .dash-hint {
+  display: none !important;
+}
+body.kiosk .main {
+  max-width: none;
+  padding: 14px;
+}
+.kiosk-exit {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 70;
+  background: color-mix(in srgb, var(--c-surface) 82%, transparent);
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-sub);
+  opacity: 0.25;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(6px);
+}
+.kiosk-exit:hover,
+.kiosk-exit:focus-visible {
+  opacity: 1;
+}
+
 /* ギャラリー */
 .gallery { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 560px) {

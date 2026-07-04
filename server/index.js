@@ -8,6 +8,7 @@ import { Scanner } from './lib/scanner.js'
 import { createApiRouter } from './routes/api.js'
 import { serveStatic } from './lib/http.js'
 import { seedDemoDevices, keepDemoAlive, demoScannerState } from './lib/demo.js'
+import { gcUploads } from './lib/uploads.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -32,6 +33,10 @@ if (DEMO) {
   console.log('[demo] デモモードで起動します（ネットワークスキャンは行いません）')
 }
 if (!NO_SCAN) scanner.start()
+
+// どのウィジェットからも参照されない画像の掃除（起動時 + 6時間ごと）
+gcUploads(store)
+setInterval(() => gcUploads(store), 6 * 3600_000).unref?.()
 
 const router = createApiRouter({ store, scanner, version, demo: DEMO })
 

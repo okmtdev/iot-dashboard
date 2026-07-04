@@ -1,8 +1,13 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { Router, HttpError } from '../lib/http.js'
 import { uid, starterWidgets } from '../lib/store.js'
 import { sendWol, normalizeMac } from '../lib/wol.js'
 import { getSystemStats } from '../lib/system.js'
 import { forecast, geocode, demoForecast } from '../lib/weather.js'
+import { IMAGE_EXT, MIME_BY_EXT, UPLOAD_NAME_RE, sniffImage, saveUpload, uploadsDirOf } from '../lib/uploads.js'
+
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 const MAC_KEY_RE = /^(([0-9a-f]{2}:){5}[0-9a-f]{2}|ip:\d+\.\d+\.\d+\.\d+)$/
 
@@ -144,6 +149,45 @@ export function createApiRouter({ store, scanner, version, demo = false }) {
 
   router.get('/api/geocode', async (c) => {
     c.json(200, await geocode(c.query.get('q')))
+  })
+
+  // ---- 画像アップロード（フォトウィジェット用） ----
+
+  router.post('/api/uploads', async (c) => {
+    const type = String(c.req.headers['content-type'] || '').split(';')[0].trim().toLowerCase()
+    if (!IMAGE_EXT[type]) {
+      throw new HttpError(415, '対応していない画像形式です（JPEG / PNG / WebP / GIF / AVIF）')
+    }
+    const buf = await c.raw(MAX_UPLOAD_BYTES)
+    const ext = sniffImage(buf)
+    if (!ext) throw new HttpError(415, '画像として認識できませんでした')
+    const name = await saveUpload(store.dataDir, buf, ext)
+    c.json(201, { file: name, url: `/uploads/${name}`, size: buf.length })
+  })
+
+  router.get('/uploads/:name', async (c) => {
+    const name = c.params.name
+    if (!UPLOAD_NAME_RE.test(name)) throw new HttpError(400, 'ファイル名が不正です')
+    const full = path.join(uploadsDirOf(store.dataDir), name)
+    let stat
+    try {
+      stat = await fs.promises.stat(full)
+    } catch {
+      throw new HttpError(404, '画像が見つかりません')
+    }
+    c.res.writeHead(200, {
+      'Content-Type': MIME_BY_EXT[name.split('.').pop()] || 'application/octet-stream',
+      'Content-Length': stat.size,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    })
+    fs.createReadStream(full).pipe(c.res)
+  })
+
+  router.delete('/api/uploads/:name', async (c) => {
+    const name = c.params.name
+    if (!UPLOAD_NAME_RE.test(name)) throw new HttpError(400, 'ファイル名が不正です')
+    await fs.promises.unlink(path.join(uploadsDirOf(store.dataDir), name)).catch(() => {})
+    c.json(200, { ok: true })
   })
 
   // ---- 設定・データ ----
