@@ -756,10 +756,48 @@ select.input { appearance: auto; }
 .w-weather-desc { font-size: 12px; color: var(--c-sub); margin-top: 4px; }
 .w-weather-chips { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--c-sub); min-width: 0; }
 .w-weather-sec { font-size: 11px; color: var(--c-muted); margin-bottom: 4px; }
-.w-weather-bars { display: flex; align-items: flex-end; gap: 3px; height: 44px; }
-.w-weather-barcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; justify-content: flex-end; }
-.w-weather-bar { width: 100%; border-radius: 2px 2px 0 0; background: var(--c-series1); opacity: 0.8; }
-.w-weather-barlabel { font-size: 9px; color: var(--c-muted); line-height: 1; white-space: nowrap; }
+/* 時別降水確率: %／バー／時刻を固定高の別行にして底辺を揃える */
+.w-weather-hours { display: flex; align-items: stretch; gap: 3px; height: 76px; }
+.wx-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wx-pct {
+  height: 13px;
+  line-height: 13px;
+  font-size: 9px;
+  text-align: center;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.wx-pct.is-strong { color: var(--c-series1); font-weight: 700; }
+.wx-track {
+  flex: 1;
+  position: relative;
+  min-height: 8px;
+  background: var(--c-surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.wx-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-series1);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.82;
+}
+.wx-col.is-now .wx-bar { opacity: 1; }
+.wx-col.is-now .wx-track { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-series1) 55%, transparent); }
+.wx-tick {
+  height: 13px;
+  line-height: 13px;
+  font-size: 9px;
+  text-align: center;
+  color: var(--c-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
 .w-weather-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: auto; }
 .w-weather-day {
   text-align: center;
