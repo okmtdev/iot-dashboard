@@ -1,0 +1,29 @@
+# iot-dashboard systemd ユニット
+# 配置先の例: /etc/systemd/system/iot-dashboard.service
+# WorkingDirectory と User は環境に合わせて変更してください。
+[Unit]
+Description=iot-dashboard (home network dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iotdash
+Group=iotdash
+WorkingDirectory=/opt/iot-dashboard
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# LAN外に公開しない前提。必要ならBasic認証を有効化:
+# Environment=BASIC_AUTH_USER=admin
+# Environment=BASIC_AUTH_PASS=強いパスワードに変更
+
+# 保護系の設定（dataディレクトリのみ書き込み許可）
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/iot-dashboard/data
+
+[Install]
+WantedBy=multi-user.target
