@@ -43,6 +43,58 @@ export default {
       return { el, destroy: () => bag.run() }
     }
 
+    let lastData = null
+    let curPctStep = null
+    let curHourStep = null
+
+    // 幅から「ラベル1個に使える最小px」を割って、収まる本数→間引き間隔を決める
+    const stepFor = (per) => {
+      const usable = Math.max(80, (el.clientWidth || 320) - 32)
+      const fit = Math.max(1, Math.floor(usable / per))
+      return Math.max(1, Math.ceil(24 / fit))
+    }
+
+    // 24時間の降水確率バー。%・バー・時刻を固定高の別々の行にして底辺を必ず揃える。
+    const hourlyBlock = (data) => {
+      const hours = data.hourly || []
+      if (config.showHourly === false || hours.length === 0) return null
+      const pctStep = stepFor(26) // %ラベルの間引き
+      const hourStep = Math.max(pctStep, stepFor(42)) // 時刻ラベルは幅を取るので粗め
+      curPctStep = pctStep
+      curHourStep = hourStep
+      return h(
+        'div',
+        { class: 'w-weather-hourly' },
+        h('div', { class: 'w-weather-sec' }, 'これから24時間の降水確率'),
+        h(
+          'div',
+          { class: 'w-weather-hours' },
+          hours.map((hh, i) => {
+            const hour = new Date(hh.time).getHours()
+            const prob = hh.precipProb ?? 0
+            return h(
+              'div',
+              {
+                class: `wx-col ${i === 0 ? 'is-now' : ''}`,
+                title: `${hour}時 ・ 降水確率 ${hh.precipProb ?? '-'}% ・ ${hh.temperature ?? '-'}℃`,
+              },
+              h(
+                'div',
+                { class: `wx-pct ${prob >= 50 ? 'is-strong' : ''}` },
+                i % pctStep === 0 ? `${hh.precipProb ?? '-'}%` : ''
+              ),
+              h(
+                'div',
+                { class: 'wx-track' },
+                h('div', { class: 'wx-bar', style: { height: prob > 0 ? `max(2px, ${prob}%)` : '0' } })
+              ),
+              h('div', { class: 'wx-tick' }, i % hourStep === 0 ? `${hour}時` : '')
+            )
+          })
+        )
+      )
+    }
+
     const render = (data, error) => {
       if (error) {
         el.replaceChildren(
@@ -60,6 +112,7 @@ export default {
         el.replaceChildren(widgetMessage('読み込み中…'))
         return
       }
+      lastData = data
       const cur = data.current
       const info = weatherInfo(cur.weatherCode, cur.isDay)
       const precipNow = data.hourly?.[0]?.precipProb
@@ -93,31 +146,7 @@ export default {
             precipNow != null ? h('div', {}, `☔ 降水確率 ${precipNow}%`) : null
           )
         ),
-        config.showHourly !== false && data.hourly?.length > 0
-          ? h(
-              'div',
-              { class: 'w-weather-hourly' },
-              h('div', { class: 'w-weather-sec' }, 'これから24時間の降水確率'),
-              h(
-                'div',
-                { class: 'w-weather-bars' },
-                data.hourly.map((hh, i) =>
-                  h(
-                    'div',
-                    {
-                      class: 'w-weather-barcol',
-                      title: `${new Date(hh.time).getHours()}時 ${hh.precipProb ?? '-'}% / ${hh.temperature ?? '-'}℃`,
-                    },
-                    h('div', {
-                      class: 'w-weather-bar',
-                      style: { height: `${Math.max(2, ((hh.precipProb ?? 0) / 100) * 32)}px` },
-                    }),
-                    i % 6 === 0 ? h('div', { class: 'w-weather-barlabel' }, `${new Date(hh.time).getHours()}時`) : null
-                  )
-                )
-              )
-            )
-          : null,
+        hourlyBlock(data),
         config.showWeekly !== false && data.daily?.length > 0
           ? h(
               'div',
@@ -150,6 +179,14 @@ export default {
         render(null, err)
       }
     }
+    // 幅が変わってラベルの間引き間隔が変わるときだけ再描画（無限ループ防止）
+    const ro = new ResizeObserver(() => {
+      if (!lastData) return
+      if (stepFor(26) !== curPctStep || Math.max(stepFor(26), stepFor(42)) !== curHourStep) render(lastData, null)
+    })
+    ro.observe(el)
+    bag.add(() => ro.disconnect())
+
     render(null, null)
     load()
     bag.interval(load, 10 * 60 * 1000)
